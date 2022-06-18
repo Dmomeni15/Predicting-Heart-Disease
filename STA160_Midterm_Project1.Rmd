@@ -1,0 +1,90 @@
+---
+title: "STA160 Midterm Project"
+author: "Kunteng Miao"
+date: "2022/4/21"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+heart = read.csv("C:/Users/30583/Desktop/STA160/heart_disease_health_indicators_BRFSS2015.csv")
+```
+
+```{r}
+library(ggplot2)
+library(reshape2)
+cormat <- round(x = cor(heart), digits = 2)
+melted_cormat <- melt(cormat)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill = value)) +
+  geom_tile()+
+  theme(axis.text.x=element_text(angle = 90, hjust = 1))
+
+```
+
+```{r}
+### Get lower triangle of the correlation matrix
+get_lower_tri<-function(cormat){
+  cormat[upper.tri(cormat)] <- NA
+  return(cormat)
+}
+### Get upper triangle of the correlation matrix
+get_upper_tri <- function(cormat){
+  cormat[lower.tri(cormat)]<- NA
+  return(cormat)
+}
+
+upper_tri <- get_upper_tri(cormat)
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+
+### Heatmap
+ggplot(data = melted_cormat, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+   name="Pearson\nCorrelation") +
+  theme_minimal()+ 
+ theme(axis.text.x = element_text(angle = 90, vjust = 0, 
+    size = 9, hjust = 1))+
+ coord_fixed()
+```
+
+```{r}
+library(ggplot2)
+library(ggcorrplot)
+ggcorrplot::ggcorrplot(cor(heart))+
+    theme(axis.text.x = element_text(angle = 90, vjust = 0, 
+    size = 10, hjust = 1))+
+    theme(axis.text.y = element_text( vjust = 0, 
+    size = 10, hjust = 1))
+```
+
+
+```{r}
+#Relative importance
+library(relaimpo)
+lmMod <- lm(HeartDiseaseorAttack ~ . , data = heart)  # fit lm() model
+relImportance <- calc.relimp(lmMod, type = "lmg", rela = TRUE)  # calculate relative importance scaled to 100
+sort(relImportance$lmg, decreasing=TRUE)  # relative importance
+```
+
+```{r}
+library(earth)
+marsModel <- earth(HeartDiseaseorAttack ~ ., data=heart) # build model
+ev <- evimp (marsModel) # estimate variable importance
+plot(ev)
+```
+
+```{r}
+library(Boruta)
+# Decide if a variable is important or not using Boruta
+boruta_output <- Boruta(HeartDiseaseorAttack ~ ., data=na.omit(heart), doTrace=2)  # perform Boruta search
+boruta_signif <- names(boruta_output$finalDecision[boruta_output$finalDecision %in% c("Confirmed", "Tentative")])  # collect Confirmed and Tentative variables
+print(boruta_signif)  # significant variables
+plot(boruta_output, cex.axis=.7, las=2, xlab="", main="Variable Importance")  # plot variable importance
+```
+
+
+
